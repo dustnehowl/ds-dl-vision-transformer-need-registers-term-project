@@ -100,6 +100,8 @@ outlier cos mean: 0.8228
 | Normal patches   | 0.6204                 |
 | Artifact patches | 0.8228                 |
 
+### Cosine Similarity Distribution
+
 Artifact patch는 일반 patch보다 주변 4개 이웃 patch와 훨씬 높은 cosine similarity를 보였다.
 또한 artifact 분포는 cosine similarity가 1.0에 가까운 영역에 강하게 집중되어 있었으며, 이는 논문 Figure 5(a)의 결과와 일치한다.
 
@@ -155,6 +157,8 @@ outlier_count: 98775
 outlier_ratio_percent: 1.0079
 ```
 
+### Dataset-Level Norm Distribution
+
 히스토그램을 보면 대부분의 patch token은 norm 값이 25~50 범위에 분포하지만, 일부 token은 190~245 부근의 별도 고-norm 영역을 형성한다.
 이는 SigLIP 역시 이봉 분포(bimodal distribution)에 가까운 norm 분포를 보인다는 것을 의미한다. 다만 outlier 비율은 DINOv2보다 더 낮게 나타났다.
 
@@ -178,6 +182,8 @@ python siglip_artifact_probe_full.py \
   --outdir ./outputs_siglip_visual_one
 ```
 
+### Example Artifact Visualization
+
 선택된 이미지에서는 소수의 patch token만 threshold를 초과하였다.
 SigLIP-B/16은 224×224 입력에서 14×14 patch grid를 생성하므로 이미지당 총 196개의 patch token이 존재한다.
 약 1.5% 수준의 outlier 비율은 실제로는 약 3개의 patch에 해당한다.
@@ -189,6 +195,8 @@ SigLIP-B/16은 224×224 입력에서 14×14 patch grid를 생성하므로 이미
 ## 레이어별 분석
 
 레이어별 norm 히스토그램과 norm map도 함께 시각화하였다.
+
+### Layer-wise Norm Evolution
 
 레이어별 분석 결과는 다음과 같은 특징을 보였다.
 
