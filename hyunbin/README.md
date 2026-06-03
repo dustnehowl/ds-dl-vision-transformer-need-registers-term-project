@@ -94,6 +94,7 @@ threshold mean: 150.000
 normal cos mean: 0.6204
 outlier cos mean: 0.8228
 ```
+![Cosine Similarity](cos_sim_results.png)
 
 | Token Type       | Mean Cosine Similarity |
 | ---------------- | ---------------------- |
@@ -156,6 +157,7 @@ threshold: 150.0
 outlier_count: 98775
 outlier_ratio_percent: 1.0079
 ```
+![SigLIP Norm Distribution](siglip_artifact_bimodal.png)
 
 ### Dataset-Level Norm Distribution
 
@@ -181,6 +183,7 @@ python siglip_artifact_probe_full.py \
   --manual_threshold 150 \
   --outdir ./outputs_siglip_visual_one
 ```
+![SigLIP Artifact Example](siglip_artifact_example.png)
 
 ### Example Artifact Visualization
 
@@ -195,6 +198,7 @@ SigLIP-B/16은 224×224 입력에서 14×14 patch grid를 생성하므로 이미
 ## 레이어별 분석
 
 레이어별 norm 히스토그램과 norm map도 함께 시각화하였다.
+![SigLIP Layer-wise Analysis](siglip_artifact_layer.png)
 
 ### Layer-wise Norm Evolution
 
