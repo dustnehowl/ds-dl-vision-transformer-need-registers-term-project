@@ -1,0 +1,7 @@
+{
+  "seed": 42,
+  "results": {
+    "dinov2_vitl14": 0.4957,
+    "dinov2_vitl14_reg": 0.4711
+  }
+}

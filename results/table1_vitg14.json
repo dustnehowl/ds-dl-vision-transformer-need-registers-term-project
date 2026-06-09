@@ -1,0 +1,97 @@
+{
+  "model": "dinov2_vitg14",
+  "image_size": 224,
+  "norm_threshold": 150.0,
+  "results": {
+    "Food101": {
+      "cls": 94.81,
+      "normal_mean": 76.42,
+      "normal_std": 0.06,
+      "outlier_mean": 92.9,
+      "outlier_std": 0.04,
+      "threshold": 150.0,
+      "n_train": 75750,
+      "n_test": 25250
+    },
+    "CIFAR10": {
+      "cls": 99.46,
+      "normal_mean": 97.42,
+      "normal_std": 0.14,
+      "outlier_mean": 99.23,
+      "outlier_std": 0.03,
+      "threshold": 150.0,
+      "n_train": 50000,
+      "n_test": 10000
+    },
+    "CIFAR100": {
+      "cls": 93.95,
+      "normal_mean": 82.16,
+      "normal_std": 0.23,
+      "outlier_mean": 92.7,
+      "outlier_std": 0.33,
+      "threshold": 150.0,
+      "n_train": 50000,
+      "n_test": 10000
+    },
+    "CUB200": {
+      "cls": 91.28,
+      "normal_mean": 19.58,
+      "normal_std": 0.74,
+      "outlier_mean": 84.62,
+      "outlier_std": 0.33,
+      "threshold": 150.0,
+      "n_train": 5994,
+      "n_test": 5794
+    },
+    "Aircraft": {
+      "cls": 87.25,
+      "normal_mean": 18.83,
+      "normal_std": 0.23,
+      "outlier_mean": 74.66,
+      "outlier_std": 0.59,
+      "threshold": 150.0,
+      "n_train": 6667,
+      "n_test": 3333
+    },
+    "Caltech101": {
+      "cls": 93.31,
+      "normal_mean": 74.24,
+      "normal_std": 0.52,
+      "outlier_mean": 96.36,
+      "outlier_std": 0.08,
+      "threshold": 150.0,
+      "n_train": 3030,
+      "n_test": 5647
+    },
+    "Flowers102": {
+      "cls": 99.69,
+      "normal_mean": 61.6,
+      "normal_std": 0.91,
+      "outlier_mean": 99.6,
+      "outlier_std": 0.02,
+      "threshold": 150.0,
+      "n_train": 2040,
+      "n_test": 6149
+    },
+    "Pets": {
+      "cls": 96.59,
+      "normal_mean": 50.59,
+      "normal_std": 0.36,
+      "outlier_mean": 93.96,
+      "outlier_std": 0.27,
+      "threshold": 150.0,
+      "n_train": 3680,
+      "n_test": 3669
+    },
+    "DTD": {
+      "cls": 81.81,
+      "normal_mean": 58.48,
+      "normal_std": 0.68,
+      "outlier_mean": 83.28,
+      "outlier_std": 0.05,
+      "threshold": 150.0,
+      "n_train": 1880,
+      "n_test": 1880
+    }
+  }
+}
