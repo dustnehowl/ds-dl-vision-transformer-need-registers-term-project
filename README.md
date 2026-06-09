@@ -3,19 +3,22 @@
 > Darcet et al., "Vision Transformers Need Registers", ICLR 2024
 > ([arXiv:2309.16588](https://arxiv.org/abs/2309.16588))
 
-Term project for DS/DL course: reproducing key experiments from the paper using DINOv2 backbones.
+Term project for DS/DL course: reproducing key experiments from the paper using DINOv2 backbones, with additional analysis on DINO(v1) and SigLIP.
 
 ---
 
 ## Overview
 
-The paper identifies **artifact tokens** (high-norm outlier patches) in ViT feature maps and proposes appending **register tokens** during training to eliminate them. We reproduce three groups of experiments to verify the claims:
+The paper identifies **artifact tokens** (high-norm outlier patches) in ViT feature maps and proposes appending **register tokens** during training to eliminate them. We reproduce and extend the paper's experiments:
 
 | Experiment | Paper Reference | What we verify |
 |---|---|---|
-| **Figure 3** | Norm distribution | Outlier patches show bimodal L2 norm distribution |
+| **Figure 3** | Norm distribution (DINOv2) | Outlier patches show bimodal L2 norm distribution |
+| **Figure 3** | Norm distribution (DINO v1) | Original DINO does NOT show bimodal artifacts |
+| **Figure 5** | Cosine similarity | Artifact tokens have high similarity with neighbors |
 | **Table 1** | Token-level probing | Outlier tokens carry global (class) information |
-| **Table 2** | Downstream tasks | Registers improve ImageNet classification, ADE20k segmentation, NYUd depth |
+| **Table 2** | Downstream tasks | Registers improve ImageNet, ADE20k, NYUd |
+| **Extension** | SigLIP artifact analysis | Vision-Language ViT also shows high-norm artifacts |
 
 ---
 
@@ -23,47 +26,96 @@ The paper identifies **artifact tokens** (high-norm outlier patches) in ViT feat
 
 ```
 .
-├── fig3_norm_visualization.py      # Figure 3: patch norm distribution & norm map
+├── fig3_norm_visualization.py      # Figure 3: DINOv2 patch norm distribution & norm map
+├── fig3_dino_norm_analysis.ipynb   # Figure 3: DINO(v1) norm analysis with GMM bimodality test
+├── fig5_cosine_similarity.py       # Figure 5: artifact vs normal patch cosine similarity
 ├── table1_token_probing.py         # Table 1: CLS / normal / outlier token linear probing
 ├── table2_imagenet_extract.py      # Table 2: ImageNet feature extraction (multi-GPU)
 ├── table2_imagenet_linear.py       # Table 2: ImageNet linear classification
 ├── table2_ade20k_segmentation.py   # Table 2: ADE20k linear segmentation (4-layer BNHead)
 ├── table2_nyud_depth.py            # Table 2: NYUd monocular depth (Official BNHead)
-├── results/                        # Experiment result JSONs
-│   ├── table1_vitg14.json
-│   ├── table2_imagenet.json
-│   ├── table2_ade20k_noreg.json
-│   ├── table2_ade20k_reg.json
-│   └── table2_nyud.json
-└── archive/                        # Previous exploration notebooks & scripts
+├── siglip_norm_distribution.py     # Extension: SigLIP dataset-level norm analysis
+├── siglip_artifact_visualization.py # Extension: SigLIP per-image artifact visualization
+├── results/                        # Experiment results (JSON + images)
+└── archive/                        # Previous exploration notebooks & per-member READMEs
 ```
 
 ---
 
 ## Experiments & Results
 
-### Figure 3: Patch Token Norm Distribution
+### 1. Figure 3: Patch Token Norm Distribution
+
+#### DINOv2 (bimodal — artifacts present)
 
 Patch token의 L2 norm (LayerNorm 이전, `x_prenorm`)을 시각화하여 outlier의 bimodal distribution을 확인합니다.
 
 ```bash
-# DINOv2 ViT-L (without registers) — CIFAR-10 validation set
-python fig3_norm_visualization.py --models dinov2_vitl14 --gpu 0
-
-# With vs Without registers 비교
+# DINOv2 ViT-L — with vs without registers 비교
 python fig3_norm_visualization.py --models dinov2_vitl14 dinov2_vitl14_reg --gpu 0
 ```
 
 **Observation**: `dinov2_vitl14`에서 norm > 150인 outlier patch가 전체의 약 2-3%를 차지하며, register 모델에서는 이 bimodal peak가 사라짐.
 
+#### DINO v1 (unimodal — no artifacts)
+
+DINO(원본) `ViT-S/16`에서는 DINOv2와 달리 high-norm artifact가 나타나지 않는다는 것을 GMM 기반 bimodality 검출로 확인합니다.
+
+```bash
+# Jupyter notebook 실행
+jupyter notebook fig3_dino_norm_analysis.ipynb
+```
+
+| Model | Distribution | Artifact Ratio | GMM Separation |
+|---|---|---:|---|
+| DINOv2 ViT-g/14 (paper) | Bimodal | ~3.39% | High |
+| DINO ViT-S/16 (ours) | **Unimodal** | **0.00%** | 1.68 (< 3.0 threshold) |
+| DINOv2 + reg (paper) | Unimodal | 0% | - |
+
+<p align="center">
+<img src="results/norm_distribution_dino.png" width="45%">
+<img src="results/norm_map_dino.png" width="45%">
+</p>
+
+**Key finding**: DINO(v1) ViT-S/16의 patch token norm 분포는 완전히 unimodal (norm range: 3.2~5.5)이며, DINOv2에서 보이는 high-norm artifact가 전혀 존재하지 않음. 이는 논문의 관찰과 정확히 일치.
+
+**Method**: 단순 threshold 대신 2-component GMM을 피팅하여 separation score (`|mu1 - mu2| / ((sigma1 + sigma2) / 2)`)를 계산. Score < 3.0이면 unimodal로 판정하여 false positive를 방지.
+
 ---
 
-### Table 1: Token-level Linear Probing
+### 2. Figure 5: Cosine Similarity Analysis
+
+논문 Figure 5(a)에서 artifact token이 주변 patch와 높은 cosine similarity를 갖는다는 관찰을 재현합니다.
+
+```bash
+python fig5_cosine_similarity.py \
+    --model dinov2_vitg14 \
+    --data_dir /path/to/imagenet/val \
+    --num_images 50000 \
+    --threshold 150 \
+    --output_dir ./results
+```
+
+| Token Type | Mean Cosine Similarity | Count |
+|---|---:|---:|
+| Normal patches | 0.6204 | 46,809,338 |
+| Artifact patches | **0.8228** | 1,190,662 |
+
+<p align="center">
+<img src="results/cos_sim_results.png" width="60%">
+</p>
+
+**Key finding**: Artifact patch는 주변 4-neighbor와의 cosine similarity가 normal patch보다 **0.20 이상 높음**. Artifact 분포는 similarity ~1.0에 강하게 집중. 이는 high-norm artifact가 균일한 배경 등 patch 정보가 중복되는 영역에서 주로 발생하며, 고유한 시각 정보보다 중복/전역 정보를 저장하는 역할을 함을 시사. Outlier 비율 ~2.48%로 논문(2.37%)과 유사.
+
+**Note**: Cosine similarity는 transformer 최종 출력이 아닌 **patch embedding 직후** feature에서 계산. 최종 출력은 global information이 이미 섞여있어, 원래 이미지에서의 local 중복성을 측정하기 위해 초기 feature를 사용.
+
+---
+
+### 3. Table 1: Token-level Linear Probing
 
 CLS token, normal patch, outlier patch 각각으로 linear probing하여 outlier token이 global information을 carry하는지 확인합니다.
 
 ```bash
-# DINOv2 ViT-G14, auto threshold (상위 2.37%)
 python table1_token_probing.py \
     --model dinov2_vitg14 \
     --datasets CIFAR10 CIFAR100 Aircraft DTD Flowers102 Food101 Pets Caltech101 CUB200 \
@@ -85,11 +137,11 @@ python table1_token_probing.py \
 | Pets | 96.59 | 50.59 | 93.96 | +43.37 |
 | DTD | 81.81 | 58.48 | 83.28 | +24.80 |
 
-**Key finding**: 모든 데이터셋에서 outlier patch의 accuracy가 normal patch보다 크게 높음 → outlier token이 class-level global information을 담고 있음을 확인 (논문의 Table 1 trend 재현 성공).
+**Key finding**: 모든 데이터셋에서 outlier patch의 accuracy가 normal patch보다 크게 높음 (Delta +1.8 ~ +65.0). Outlier token이 class-level global information을 담고 있음을 확인 (논문의 Table 1 trend 재현 성공).
 
 ---
 
-### Table 2: Downstream Task Performance
+### 4. Table 2: Downstream Task Performance
 
 Register token 추가에 따른 downstream task 성능 변화를 재현합니다.
 
@@ -154,17 +206,68 @@ python table2_nyud_depth.py \
 
 ---
 
+### 5. Extension: SigLIP Artifact Analysis
+
+논문은 DINOv2에서의 artifact를 분석하지만, Vision-Language ViT 계열인 **SigLIP**에서도 유사한 현상이 나타나는지 추가 분석합니다.
+
+#### Dataset-level Norm Distribution
+
+```bash
+python siglip_norm_distribution.py \
+    --model google/siglip-base-patch16-224 \
+    --data_dir /path/to/imagenet/val \
+    --num_images 50000 \
+    --threshold 150
+```
+
+| Metric | Value |
+|---|---|
+| Total patch tokens | 9,800,000 |
+| Mean norm | 46.44 |
+| P99 norm | 154.0 |
+| Outlier ratio (norm > 150) | **1.01%** |
+| Max norm | 255.37 |
+
+<p align="center">
+<img src="results/siglip_artifact_bimodal.png" width="60%">
+</p>
+
+대부분의 patch token은 norm 25~50 범위에 분포하지만, 일부 token이 190~245 부근의 별도 high-norm 영역을 형성 → SigLIP도 **bimodal-like distribution**을 보임.
+
+#### Per-image Artifact Visualization & Layer-wise Analysis
+
+```bash
+python siglip_artifact_visualization.py \
+    --image /path/to/image.jpg \
+    --model google/siglip-base-patch16-224 \
+    --manual_threshold 150
+```
+
+<p align="center">
+<img src="results/siglip_artifact_example.png" width="45%">
+<img src="results/siglip_artifact_layer.png" width="45%">
+</p>
+
+**Key findings**:
+- SigLIP-B/16에서도 high-norm artifact token이 관찰됨 (outlier ratio ~1.01%, DINOv2의 ~2.37%보다 낮음)
+- 초기 레이어에서는 artifact가 없으나, **깊은 레이어로 갈수록 high-norm token이 점진적으로 형성**됨
+- Artifact는 공간적으로 소수 patch에 국소적으로 집중
+- 이는 artifact 형성이 DINOv2 고유 현상이 아닌, ViT 아키텍처의 일반적 특성일 수 있음을 시사
+
+---
+
 ## Environment
 
 - **GPU**: NVIDIA A6000 (48GB) x 8
 - **Framework**: PyTorch 2.x + torchvision
-- **Backbone**: DINOv2 (via `torch.hub.load('facebookresearch/dinov2', ...)`)
-- **Datasets**: ImageNet-1K, ADE20K (ADEChallengeData2016), NYU Depth v2, CIFAR-10/100, CUB-200, FGVCAircraft, DTD, Flowers102, Food101, OxfordIIITPet, SUN397, Caltech101
+- **Backbone**: DINOv2 (via `torch.hub`), DINO v1 (via `torch.hub`), SigLIP (via HuggingFace `transformers`)
+- **Datasets**: ImageNet-1K, ADE20K, NYU Depth v2, CIFAR-10/100, CUB-200, FGVCAircraft, DTD, Flowers102, Food101, OxfordIIITPet, SUN397, Caltech101
 
 ### Requirements
 
 ```bash
-pip install torch torchvision numpy matplotlib tqdm h5py pillow
+pip install torch torchvision numpy matplotlib tqdm h5py pillow scikit-learn
+pip install transformers  # for SigLIP experiments
 ```
 
 ---
@@ -173,9 +276,9 @@ pip install torch torchvision numpy matplotlib tqdm h5py pillow
 
 | Member | Contribution |
 |---|---|
-| Yeonsu Kim | Table 1 (token probing), Table 2 (ImageNet, ADE20k, NYUd), Figure 3, experiment pipeline |
-| Eunjung | DINOv1 norm visualization |
-| Hyunbin | SigLIP artifact analysis, cosine similarity experiments |
+| Yeonsu Kim | Table 1 (token probing), Table 2 (ImageNet, ADE20k, NYUd), Figure 3 (DINOv2), experiment pipeline |
+| Eunjung | Figure 3 (DINO v1): GMM-based bimodality detection, proving original DINO has no artifacts |
+| Hyunbin | Figure 5 (cosine similarity), SigLIP artifact analysis (norm distribution, layer-wise, visualization) |
 
 ---
 
@@ -183,4 +286,6 @@ pip install torch torchvision numpy matplotlib tqdm h5py pillow
 
 - Darcet, T., Oquab, M., Mairal, J., & Jegou, H. (2024). *Vision Transformers Need Registers*. ICLR 2024.
 - Oquab, M., et al. (2023). *DINOv2: Learning Robust Visual Features without Supervision*. arXiv:2304.07193.
+- Caron, M., et al. (2021). *Emerging Properties in Self-Supervised Vision Transformers*. ICCV 2021.
+- Zhai, X., et al. (2023). *Sigmoid Loss for Language Image Pre-Training*. ICCV 2023.
 - Chen, T., et al. (2020). *A Simple Framework for Contrastive Learning of Visual Representations*. ICML 2020.
