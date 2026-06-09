@@ -14,7 +14,7 @@ The paper identifies **artifact tokens** (high-norm outlier patches) in ViT feat
 | Experiment | Paper Reference | What we verify |
 |---|---|---|
 | **Figure 3** | Norm distribution (DINOv2) | Outlier patches show bimodal L2 norm distribution |
-| **Figure 3** | Norm distribution (DINO v1) | Original DINO does NOT show bimodal artifacts |
+| **Figure 2** | Outlier visualization | High-norm patches appear on low-information regions |
 | **Figure 5** | Cosine similarity | Artifact tokens have high similarity with neighbors |
 | **Table 1** | Token-level probing | Outlier tokens carry global (class) information |
 | **Table 2** | Downstream tasks | Registers improve ImageNet, ADE20k, NYUd |
@@ -26,8 +26,8 @@ The paper identifies **artifact tokens** (high-norm outlier patches) in ViT feat
 
 ```
 .
+├── fig2_outlier_visualization.py    # Figure 2: DINOv2 outlier token overlay visualization
 ├── fig3_norm_visualization.py      # Figure 3: DINOv2 patch norm distribution & norm map
-├── fig3_dino_norm_analysis.ipynb   # Figure 3: DINO(v1) norm analysis with GMM bimodality test
 ├── fig5_cosine_similarity.py       # Figure 5: artifact vs normal patch cosine similarity
 ├── table1_token_probing.py         # Table 1: CLS / normal / outlier token linear probing
 ├── table2_imagenet_extract.py      # Table 2: ImageNet feature extraction (multi-GPU)
@@ -57,29 +57,27 @@ python fig3_norm_visualization.py --models dinov2_vitl14 dinov2_vitl14_reg --gpu
 
 **Observation**: `dinov2_vitl14`에서 norm > 150인 outlier patch가 전체의 약 2-3%를 차지하며, register 모델에서는 이 bimodal peak가 사라짐.
 
-#### DINO v1 (unimodal — no artifacts)
+### 1-1. Figure 2: Outlier Token Visualization
 
-DINO(원본) `ViT-S/16`에서는 DINOv2와 달리 high-norm artifact가 나타나지 않는다는 것을 GMM 기반 bimodality 검출로 확인합니다.
+DINOv2-g의 high-norm outlier patch를 실제 이미지 위에 overlay하여 시각적으로 검증합니다. Threshold=150 기준으로 outlier가 어떤 위치에 나타나는지 확인하는 sanity check입니다.
 
 ```bash
-# Jupyter notebook 실행
-jupyter notebook fig3_dino_norm_analysis.ipynb
+# OxfordIIITPet에서 8장 샘플 시각화
+python fig2_outlier_visualization.py --model dinov2_vitg14 --gpu 0
+
+# 직접 이미지 디렉토리 지정
+python fig2_outlier_visualization.py --model dinov2_vitg14 --images_dir /path/to/images --gpu 0
 ```
 
-| Model | Distribution | Artifact Ratio | GMM Separation |
-|---|---|---:|---|
-| DINOv2 ViT-g/14 (paper) | Bimodal | ~3.39% | High |
-| DINO ViT-S/16 (ours) | **Unimodal** | **0.00%** | 1.68 (< 3.0 threshold) |
-| DINOv2 + reg (paper) | Unimodal | 0% | - |
-
 <p align="center">
-<img src="results/norm_distribution_dino.png" width="45%">
-<img src="results/norm_map_dino.png" width="45%">
+<img src="results/outlier_example.png" width="90%">
 </p>
 
-**Key finding**: DINO(v1) ViT-S/16의 patch token norm 분포는 완전히 unimodal (norm range: 3.2~5.5)이며, DINOv2에서 보이는 high-norm artifact가 전혀 존재하지 않음. 이는 논문의 관찰과 정확히 일치.
+<p align="center">
+<img src="results/outlier_overview_grid.png" width="80%">
+</p>
 
-**Method**: 단순 threshold 대신 2-component GMM을 피팅하여 separation score (`|mu1 - mu2| / ((sigma1 + sigma2) / 2)`)를 계산. Score < 3.0이면 unimodal로 판정하여 false positive를 방지.
+**Key finding**: High-norm outlier patch (빨간색)는 배경, 단색 영역 등 **정보량이 적은 low-information region**에 집중적으로 나타남. 이는 논문 Figure 2의 관찰과 일치하며, outlier token이 redundant patch 위치에서 global information 저장소 역할을 한다는 가설을 뒷받침함. Outlier 비율은 논문의 ~2.37%와 유사한 수준.
 
 ---
 
@@ -277,7 +275,7 @@ pip install transformers  # for SigLIP experiments
 | Member | Contribution |
 |---|---|
 | Yeonsu Kim | Table 1 (token probing), Table 2 (ImageNet, ADE20k, NYUd), Figure 3 (DINOv2), experiment pipeline |
-| Eunjung | Figure 3 (DINO v1): GMM-based bimodality detection, proving original DINO has no artifacts |
+| Eunjung | Figure 2 (outlier visualization): DINOv2 high-norm token overlay on images, verifying artifact spatial patterns |
 | Hyunbin | Figure 5 (cosine similarity), SigLIP artifact analysis (norm distribution, layer-wise, visualization) |
 
 ---
